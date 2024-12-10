@@ -5,60 +5,41 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.svm import SVR  # Support Vector Regression
+from sklearn.svm import SVR  
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.neural_network import MLPRegressor  # Neural Network Regression
+from sklearn.neural_network import MLPRegressor 
 import io
 import base64
 from sklearn.metrics import pairwise_distances
 
 app = Flask(__name__)
 
-# Load dataset and preprocess
 df = pd.read_csv('kc_house_data.csv')
 df.dropna(subset=['price'], inplace=True)
 df.drop(columns=['id', 'date'], inplace=True)
 df = pd.get_dummies(df, columns=['zipcode'], drop_first=True)
 
-# Prepare features and target
 X = df.drop(columns=['price'])
 y = np.log1p(df['price'])
 
-# Train-Test Split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# Train Models
 linear_model = LinearRegression().fit(X_train_scaled, y_train)
 svr_model = SVR(kernel='rbf').fit(X_train_scaled, y_train)
 
-# Neural Network Model (MLPRegressor)
 nn_model = MLPRegressor(hidden_layer_sizes=(100, 50), max_iter=1000, random_state=42)
 nn_model.fit(X_train_scaled, y_train)
 
 
 def knn_regression(X_train, X_test, y_train, k=5):
-    # Calculate the Euclidean distance between the test point and each training point
     distances = np.linalg.norm(X_train - X_test.reshape(1,-1), axis =1)
-
-    # Debugging: Print the distances
-    print("Distances: ", distances[:10])  # Print the first 10 distances to check
-
-    # Get indices of the k nearest neighbors
     k_indices = np.argsort(distances)[:k]
-
-    # Get the corresponding target values (prices) of the nearest neighbors
     nearest_labels = y_train.iloc[k_indices]
-
-    # Debugging: Print the nearest labels and their indices
-    print(f"Indices of Nearest Neighbors: {k_indices}")
-    print(f"Labels of Nearest Neighbors: {nearest_labels.values}")
-
-    # Return the mean of the labels of the nearest neighbors
     return np.mean(nearest_labels)
 
 
@@ -90,7 +71,6 @@ class GradientBoosting:
 gb_model = GradientBoosting(n_estimators=100, learning_rate=0.1)
 gb_model.fit(X_train_scaled, y_train)
 
-# Function to generate actual prices plot
 def create_actual_prices_plot():
     plt.figure(figsize=(12, 6))
     plt.hist(df['price'], bins=50, color='blue', alpha=0.7)
@@ -104,9 +84,7 @@ def create_actual_prices_plot():
     actual_prices_plot = base64.b64encode(img.getvalue()).decode('utf8')
     return actual_prices_plot
 
-# Function to generate plots
 def create_plots():
-    # Linear Regression
     plt.figure(figsize=(12, 6))
     plt.scatter(y_test, linear_model.predict(X_test_scaled), color='blue', alpha=0.5)
     plt.title("Linear Regression: Actual vs Predicted Prices")
@@ -118,7 +96,6 @@ def create_plots():
     img.seek(0)
     linear_reg_plot = base64.b64encode(img.getvalue()).decode('utf8')
 
-    # Support Vector Regression
     plt.figure(figsize=(12, 6))
     plt.scatter(y_test, svr_model.predict(X_test_scaled), color='green', alpha=0.5)
     plt.title("Support Vector Regression: Actual vs Predicted Prices")
@@ -130,7 +107,6 @@ def create_plots():
     img.seek(0)
     svr_plot = base64.b64encode(img.getvalue()).decode('utf8')
 
-    # Manual KNN
     plt.figure(figsize=(12, 6))
     knn_preds = [knn_regression(X_train_scaled, X_test_scaled[i], y_train, k=5) for i in range(X_test_scaled.shape[0])]
     plt.scatter(y_test, knn_preds, color='red', alpha=0.5)
@@ -143,7 +119,6 @@ def create_plots():
     img.seek(0)
     knn_plot = base64.b64encode(img.getvalue()).decode('utf8')
 
-    # Gradient Boosting
     plt.figure(figsize=(12, 6))
     plt.scatter(y_test, gb_model.predict(X_test_scaled), color='purple', alpha=0.5)
     plt.title("Gradient Boosting: Actual vs Predicted Prices")
@@ -155,7 +130,6 @@ def create_plots():
     img.seek(0)
     gb_plot = base64.b64encode(img.getvalue()).decode('utf8')
 
-    # Neural Network
     plt.figure(figsize=(12, 6))
     plt.scatter(y_test, nn_model.predict(X_test_scaled), color='orange', alpha=0.5)
     plt.title("Neural Network: Actual vs Predicted Prices")
@@ -195,14 +169,12 @@ def index():
             'view': [view]
         })
 
-        # Encode and scale new house input
         new_house_encoded = pd.get_dummies(new_house, drop_first=True)
         new_house_encoded = new_house_encoded.reindex(columns=X.columns, fill_value=0)
         new_house_scaled = scaler.transform(new_house_encoded)
-        REALISTIC_MIN_PRICE = 10_000  # e.g., $10,000
-        REALISTIC_MAX_PRICE = 5_000_000  # e.g., $5,000,000
+        REALISTIC_MIN_PRICE = 10_000  
+        REALISTIC_MAX_PRICE = 5_000_000  
 
-        # Make predictions using all models
         linear_regression_log_pred = linear_model.predict(new_house_scaled)[0]
         linear_regression_pred = np.expm1(linear_regression_log_pred)
         linear_regression_pred = max(min(linear_regression_pred, REALISTIC_MAX_PRICE), REALISTIC_MIN_PRICE)
@@ -219,7 +191,7 @@ def index():
         gb_pred = max(min(gb_pred, REALISTIC_MAX_PRICE), REALISTIC_MIN_PRICE)
 
         nn_log_pred = nn_model.predict(new_house_scaled)[0]
-        nn_pred = np.expm1(nn_log_pred)  # Reverse the log transformation
+        nn_pred = np.expm1(nn_log_pred)  
         nn_pred = max(min(nn_pred, REALISTIC_MAX_PRICE), REALISTIC_MIN_PRICE)
 
         predictions = {
@@ -229,7 +201,6 @@ def index():
 
         }
 
-        # Generate plots
         linear_reg_plot, svr_plot, knn_plot, gb_plot, nn_plot = create_plots()
 
         return render_template('index.html', predictions=predictions,
