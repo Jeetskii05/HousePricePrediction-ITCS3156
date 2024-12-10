@@ -23,12 +23,6 @@ Install the required packages using:
 
 pip install pandas scikit-learn Flask
 
-Usage
-    1.    Data Preprocessing: Clean and preprocess the data using pandas.
-    2.    Model Training: Train machine learning models (e.g., Linear Regression) using scikit-learn.
-    3.    Prediction: Use the trained model to predict house prices.
-    4.    Web Interface: Run app.py to start a Flask web application for user interaction.
-
 Files
     •    kc_house_data.csv: Dataset containing house features and prices.
     •    app.py: Flask application for the web interface.
